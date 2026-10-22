@@ -1,5 +1,5 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body><div style="background:#fff5db;color:#503d16;padding:9px 12px;font:12px -apple-system,sans-serif">PRUEBA DE RESPALDOS · JSON SIN CIFRAR. Usá solo movimientos ficticios. No ingreses datos financieros reales.</div>
-<title>Mar Finanzas PRO — Seguridad v3</title>
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body><div style="background:#fff5db;color:#503d16;padding:9px 12px;font:12px -apple-system,sans-serif">VERSIÓN 5.0 CANDIDATA · Bóveda cifrada. No ingreses datos reales hasta completar la revisión de seguridad.</div>
+<title>Mar Finanzas PRO — Bóveda v4.1 (prueba)</title>
 <style>
 /* Layout: app de una columna, pestañas abajo en el teléfono y arriba en pantallas anchas; las cifras en mono tabular */
 :root{
@@ -268,8 +268,8 @@ function monthEnd(text){
   const mi = m[1] === 'setiembre' ? 8 : MESES.indexOf(m[1]);
   return iso(new Date(+m[2], mi + 1, 0));
 }
-function lsGet(k, d){ try { const v = localStorage.getItem('fin:'+k); return v == null ? d : v; } catch { return d; } }
-function lsSet(k, v){ try { localStorage.setItem('fin:'+k, v); } catch {} }
+const ephemeralPrefs={}; function lsGet(k,d){return Object.prototype.hasOwnProperty.call(ephemeralPrefs,k)?ephemeralPrefs[k]:d;}
+function lsSet(k,v){ephemeralPrefs[k]=v;}
 let toastTimer;
 function toast(msg){
   document.querySelectorAll('.toast').forEach(t => t.remove());
@@ -391,28 +391,112 @@ const TEMPLATES = { Boda: ['Fiesta','Vestido','Alianzas','Luna de miel','Extras'
 function setSync(text, cls){ const s = $('#sync'); s.textContent = text; s.className = 'sync ' + (cls||''); }
 
 const LOCAL_KEY = 'mar_finanzas_pro_limpia_v1';
+const VAULT_KEY = 'mar_finanzas_pro_vault_v4';
+let vaultKey = null, vaultLocked = true, vaultClosing = false, vaultQueue = Promise.resolve(), vaultGeneration = 0;
+let vaultSaveError = null;
+function vaultPayload(){ return JSON.stringify({items:[...items],boda:[...boda],settings}); }
+function applyVaultPayload(raw){
+  const d=JSON.parse(raw);
+  if(!Array.isArray(d.items)||!Array.isArray(d.boda)||!d.settings||typeof d.settings!=='object') throw Error('Datos inválidos');
+  items.clear(); boda.clear(); for(const [id,v] of d.items) items.set(id,v);
+  for(const [id,v] of d.boda) boda.set(id,v); settings=d.settings;
+}
+async function vaultDerive(pass,salt){
+  const material=await crypto.subtle.importKey('raw',new TextEncoder().encode(pass),'PBKDF2',false,['deriveKey']);
+  return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:600000,hash:'SHA-256'},material,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);
+}
+async function vaultEncrypt(key,raw,salt){
+  const iv=crypto.getRandomValues(new Uint8Array(12));
+  const data=await crypto.subtle.encrypt({name:'AES-GCM',iv},key,new TextEncoder().encode(raw));
+  return JSON.stringify({format:'mar-finanzas-vault',version:1,iterations:600000,salt:bytes64(salt),iv:bytes64(iv),data:bytes64(new Uint8Array(data))});
+}
+async function vaultDecrypt(key,env){
+  const raw=await crypto.subtle.decrypt({name:'AES-GCM',iv:from64(env.iv)},key,from64(env.data));
+  return new TextDecoder().decode(raw);
+}
+function vaultEnvelope(){
+  const raw=localStorage.getItem(VAULT_KEY); if(!raw) return null;
+  const env=JSON.parse(raw);
+  if(env.format!=='mar-finanzas-vault'||env.version!==1||env.iterations!==600000||from64(env.salt).length!==16||from64(env.iv).length!==12) throw Error('Bóveda dañada');
+  return env;
+}
 function saveLocal(){
-  const payload = JSON.stringify({items:[...items], boda:[...boda], settings});
-  try { localStorage.setItem(LOCAL_KEY, payload); }
-  catch (e) { alert('No se pudo guardar en este navegador. No cierres la página.'); throw e; }
+  if(vaultLocked||vaultClosing||!vaultKey) return Promise.reject(Error('La bóveda está bloqueada'));
+  const snapshot=vaultPayload(), generation=vaultGeneration;
+  const job=vaultQueue.then(async()=>{
+    if(generation!==vaultGeneration||vaultLocked) throw Error('Sesión cerrada antes de guardar');
+    const env=vaultEnvelope();
+    const encrypted=await vaultEncrypt(vaultKey,snapshot,from64(env.salt));
+    if(generation!==vaultGeneration||vaultLocked) throw Error('Sesión cerrada antes de guardar');
+    localStorage.setItem(VAULT_KEY,encrypted);
+    vaultSaveError=null;
+  });
+  vaultQueue=job.catch(e=>{vaultSaveError=e;});
+  return job.catch(e=>{alert('No se pudo guardar el cambio cifrado: '+e.message);throw e;});
 }
-function loadLocal(){
+function showVault(message=''){
+  let overlay=document.getElementById('vault-lock');
+  if(!overlay){overlay=document.createElement('section');overlay.id='vault-lock';overlay.style.cssText='position:fixed;inset:0;z-index:9999;background:#f2f4f6;color:#13202c;display:flex;align-items:center;justify-content:center;padding:24px;font:16px system-ui';document.body.append(overlay);}
+  overlay.replaceChildren();
+  const panel=document.createElement('div');panel.style.cssText='width:min(100%,420px);background:white;padding:24px;border:1px solid #d5dce3;border-radius:18px;box-shadow:0 8px 30px #0001';
+  const heading=document.createElement('h2');heading.textContent='🔐 Mar Finanzas PRO';heading.style.margin='0 0 12px';
+  const desc=document.createElement('p');desc.textContent=message||(localStorage.getItem(VAULT_KEY)?'Ingresá tu contraseña para abrir tu bóveda.':'Creá una contraseña de al menos 12 caracteres para cifrar tus datos en este navegador.');
+  const pass=document.createElement('input');pass.type='password';pass.placeholder='Contraseña';pass.autocomplete='off';pass.style.cssText='width:100%;padding:12px;margin:8px 0;border:1px solid #aaa;border-radius:8px;color:#111;background:white';
+  const confirmPass=document.createElement('input');confirmPass.type='password';confirmPass.placeholder='Repetir contraseña';confirmPass.autocomplete='off';confirmPass.style.cssText=pass.style.cssText;
+  const isNew=!localStorage.getItem(VAULT_KEY);if(!isNew)confirmPass.hidden=true;
+  const btn=document.createElement('button');btn.textContent=isNew?'Crear bóveda cifrada':'Desbloquear';btn.style.cssText='background:#1c5d86;color:white;padding:12px;border:0;border-radius:8px;width:100%;margin-top:8px;font-weight:bold';
+  const error=document.createElement('p');error.style.color='#b0392f';
+  const note=document.createElement('p');note.style.cssText='font-size:12px;color:#596674';note.textContent='PRUEBA: solo datos ficticios. Conservá tu respaldo .mfin. Si olvidás esta contraseña, necesitás un respaldo para recuperar tus datos.';
+  btn.onclick=async()=>{
+    btn.disabled=true;error.textContent='';
+    try{
+       if(vaultClosing) throw Error('Terminando de guardar. Esperá un momento y volvé a intentar.');
+      if(!window.isSecureContext||!crypto.subtle)throw Error('Abrí la app desde HTTPS.');
+      if(isNew){
+        if(pass.value.length<12)throw Error('Usá al menos 12 caracteres.');
+        if(pass.value!==confirmPass.value)throw Error('Las contraseñas no coinciden.');
+        if(!confirm('Antes de migrar: ¿ya guardaste y probaste un respaldo .mfin de tus movimientos ficticios?'))return;
+        const legacy=localStorage.getItem(LOCAL_KEY);
+        const salt=crypto.getRandomValues(new Uint8Array(16));
+        const key=await vaultDerive(pass.value,salt);
+        if(legacy) applyVaultPayload(legacy);
+        const encrypted=await vaultEncrypt(key,vaultPayload(),salt);
+        localStorage.setItem(VAULT_KEY,encrypted); // Escribir y verificar antes de eliminar el original
+        const verify=await vaultDecrypt(key,vaultEnvelope());JSON.parse(verify);
+        localStorage.removeItem(LOCAL_KEY); localStorage.removeItem('fin:origen');
+        vaultKey=key;
+      }else{
+        const env=vaultEnvelope();const key=await vaultDerive(pass.value,from64(env.salt));
+        let raw;try{raw=await vaultDecrypt(key,env);}catch{throw Error('Contraseña incorrecta o datos dañados.');}
+        applyVaultPayload(raw);vaultKey=key;
+      }
+      vaultLocked=false;vaultClosing=false;vaultSaveError=null;vaultGeneration++;overlay.remove();
+      loaded=true; persistent=false; bodaOK=true;setSync('Bóveda local cifrada','ok');$('#fab').hidden=false;render();
+      pass.value='';confirmPass.value='';
+    }catch(e){error.textContent=e.message;}finally{btn.disabled=false;}
+  };
+  panel.append(heading,desc,pass,confirmPass,btn,error,note);overlay.append(panel);
+}
+async function lockVault(){
+  if(vaultLocked || vaultClosing)return;
+  // Ocultar datos inmediatamente, antes de esperar las escrituras cifradas.
+  vaultClosing=true;
+  cancelAnimationFrame(raf);
+  const view=document.getElementById('view'); if(view) view.replaceChildren();
+  const dialog=document.getElementById('dlg'); if(dialog?.open) dialog.close();
+  const fab=document.getElementById('fab'); if(fab) fab.hidden=true;
+  showVault('Bóveda bloqueada. Terminando guardados pendientes si los hay…');
   try {
-    const raw = localStorage.getItem(LOCAL_KEY);
-    if (!raw) return false;
-    const data = JSON.parse(raw);
-    if (!Array.isArray(data.items) || !Array.isArray(data.boda)) return false;
-    items.clear(); boda.clear();
-    for (const [id, value] of data.items) items.set(id, value);
-    for (const [id, value] of data.boda) boda.set(id, value);
-    settings = data.settings || {};
-    return true;
-  } catch(e) { alert('No se pudieron recuperar los datos locales.'); return false; }
+    await vaultQueue;
+  } finally {
+    vaultLocked=true;vaultClosing=false;vaultGeneration++;vaultKey=null;
+    items.clear();boda.clear();settings={};loaded=false;
+    showVault(vaultSaveError ? 'Bóveda bloqueada. ATENCIÓN: el último cambio podría no haberse guardado. Revisá tus datos y tu respaldo.' : 'Bóveda bloqueada. Ingresá tu contraseña para continuar.');
+  }
 }
-function localMode(){
-  persistent = false; loaded = true; bodaOK = true;
-  loadLocal(); setSync('Guardado local (sin cifrar)','warn'); render();
-}
+document.addEventListener('visibilitychange',()=>{if(document.hidden)lockVault();});
+window.addEventListener('pagehide',()=>{lockVault();});
+function localMode(){ persistent=false;loaded=false;bodaOK=true;showVault(); }
 function newId(){ return 'l' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 async function withRetry(fn){
   try { return await fn(); }
@@ -422,28 +506,33 @@ async function withRetry(fn){
   }
 }
 async function saveItem(id, data){
+  if(vaultClosing || vaultLocked) throw Error('La bóveda está bloqueada');
   if (persistent){ const ref = id ? itemsCol.doc(id) : itemsCol.doc(); await withRetry(() => ref.set(data)); }
-  else { items.set(id || newId(), data); saveLocal(); render(); }
+  else { items.set(id || newId(), data); await saveLocal(); render(); }
 }
 async function deleteItem(id){
+  if(vaultClosing || vaultLocked) throw Error('La bóveda está bloqueada');
   if (persistent) await withRetry(() => itemsCol.doc(id).delete());
-  else { items.delete(id); saveLocal(); render(); }
+  else { items.delete(id); await saveLocal(); render(); }
 }
 const isBoda = kind => SCHEMA[kind] && SCHEMA[kind].store === 'boda';
 async function saveRec(kind, id, data){
+  if(vaultClosing || vaultLocked) throw Error('La bóveda está bloqueada');
   if (!isBoda(kind)) return saveItem(id, data);
   if (persistent){ const ref = id ? bodaCol.doc(id) : bodaCol.doc(); await withRetry(() => ref.set(data)); }
-  else { boda.set(id || newId(), data); saveLocal(); render(); }
+  else { boda.set(id || newId(), data); await saveLocal(); render(); }
 }
 async function deleteRec(kind, id){
+  if(vaultClosing || vaultLocked) throw Error('La bóveda está bloqueada');
   if (!isBoda(kind)) return deleteItem(id);
   if (persistent) await withRetry(() => bodaCol.doc(id).delete());
-  else { boda.delete(id); saveLocal(); render(); }
+  else { boda.delete(id); await saveLocal(); render(); }
 }
 async function saveSettings(patch){
+  if(vaultClosing || vaultLocked) throw Error('La bóveda está bloqueada');
   settings = {...settings, ...patch};
   if (persistent) await withRetry(() => settingsRef.set(settings));
-  else saveLocal();
+  else await saveLocal();
   render();
 }
 function dbError(e){
@@ -1294,14 +1383,14 @@ async function applyImport(){
       let d = 0;
       await runPool(old.map(id => () => itemsCol.doc(id).delete()), 4, () => tick(++d));
       await runPool(data.map(o => () => itemsCol.doc().set(o)), 4, () => tick(++d));
-    } else { items.clear(); for (const o of data) items.set(newId(), o); saveLocal(); }
+    } else { items.clear(); for (const o of data) items.set(newId(), o); await saveLocal(); }
     await saveSettings({lastImport: new Date().toISOString()});
     state.importPreview = null; state.importBusy = ''; toast(`Importados ${data.length} registros.`); go('resumen');
   } catch (e){ state.importBusy = ''; toast(dbError(e)); render(); }
 }
 async function wipeAll(){
   state.importBusy = 'Borrando…'; render();
-  try { if (persistent) await runPool([...items.keys()].map(id => () => itemsCol.doc(id).delete()), 4, () => {}); else { items.clear(); saveLocal(); } state.confirmWipe = false; state.importBusy = ''; toast('Datos borrados'); render(); }
+  try { if (persistent) await runPool([...items.keys()].map(id => () => itemsCol.doc(id).delete()), 4, () => {}); else { items.clear(); await saveLocal(); } state.confirmWipe = false; state.importBusy = ''; toast('Datos borrados'); render(); }
   catch (e){ state.importBusy = ''; toast(dbError(e)); render(); }
 }
 function offerFile(filename, data){
@@ -1345,6 +1434,7 @@ async function deriveBackupKey(password,salt,usage){
   return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:600000,hash:'SHA-256'},material,{name:'AES-GCM',length:256},false,[usage]);
 }
 async function exportEncrypted(){
+  if (vaultLocked || vaultClosing || !vaultKey) return;
   if (!secureCrypto()) return;
   const password=prompt('Creá una contraseña para este respaldo (mínimo 12 caracteres). Guardala en un lugar seguro: sin ella no podremos recuperar los datos.');
   if (password===null) return;
@@ -1352,12 +1442,15 @@ async function exportEncrypted(){
   const again=prompt('Repetí la contraseña del respaldo:');
   if (again!==password){ alert('Las contraseñas no coinciden. No se creó ningún archivo.'); return; }
   try {
+    const backupGeneration=vaultGeneration;
     const salt=crypto.getRandomValues(new Uint8Array(16));
     const iv=crypto.getRandomValues(new Uint8Array(12));
     const key=await deriveBackupKey(password,salt,'encrypt');
+    if(vaultLocked || vaultClosing || backupGeneration!==vaultGeneration) throw Error('Se bloqueó la bóveda. Reintentá el respaldo.');
     const backup={format:'mar-finanzas-backup',version:2,exportado:new Date().toISOString(),items:[...items],boda:[...boda],settings};
     const encrypted=await crypto.subtle.encrypt({name:'AES-GCM',iv},key,new TextEncoder().encode(JSON.stringify(backup)));
     const envelope={format:'mar-finanzas-encrypted',version:1,kdf:'PBKDF2-SHA256',iterations:600000,cipher:'AES-256-GCM',salt:bytes64(salt),iv:bytes64(iv),data:bytes64(new Uint8Array(encrypted))};
+    if(vaultLocked || vaultClosing || backupGeneration!==vaultGeneration) throw Error('Se bloqueó la bóveda. Reintentá el respaldo.');
     offerFile(`mar-finanzas-cifrado-${TODAY}.mfin`,JSON.stringify(envelope));
   }catch(e){alert('No se pudo cifrar el respaldo: '+e.message);}
 }
@@ -1371,11 +1464,14 @@ async function importEncrypted(file){
     if(salt.length!==16||iv.length!==12||data.length<16) throw Error('Archivo cifrado inválido.');
     const password=prompt('Contraseña de este respaldo:');
     if(password===null) return;
+    const importGeneration=vaultGeneration;
     const key=await deriveBackupKey(password,salt,'decrypt');
+    if(vaultLocked || vaultClosing || importGeneration!==vaultGeneration) throw Error('Se bloqueó la bóveda durante la importación.');
     let decrypted;
     try { decrypted=await crypto.subtle.decrypt({name:'AES-GCM',iv},key,data); }
     catch { throw Error('Contraseña incorrecta o archivo dañado.'); }
     const obj=JSON.parse(new TextDecoder().decode(decrypted));
+    if(vaultLocked || vaultClosing || importGeneration!==vaultGeneration) throw Error('Se bloqueó la bóveda durante la importación.');
     const asFile=new File([JSON.stringify(obj)],'respaldo-descifrado.json',{type:'application/json'});
     await importBackupFile(asFile);
   }catch(e){alert('No se pudo restaurar el respaldo cifrado: '+e.message);}
@@ -1384,7 +1480,9 @@ async function importBackupFile(file){
   if (!file) return;
   try {
     if (file.size > 10*1024*1024) throw Error('El archivo supera 10 MB.');
+    const readGeneration=vaultGeneration;
     const data = JSON.parse(await file.text());
+    if(vaultLocked || vaultClosing || readGeneration!==vaultGeneration) throw Error('La sesión se bloqueó mientras se leía el archivo.');
     if (data.format !== 'mar-finanzas-backup' || data.version !== 2 ||
         !Array.isArray(data.items) || !Array.isArray(data.boda) ||
         !data.settings || typeof data.settings !== 'object' || Array.isArray(data.settings))
@@ -1393,20 +1491,18 @@ async function importBackupFile(file){
       typeof e[0] === 'string' && e[1] && typeof e[1] === 'object' && !Array.isArray(e[1]));
     if (!validEntries(data.items) || !validEntries(data.boda)) throw Error('Los registros no son válidos.');
     if (!confirm(`Respaldo: ${data.items.length} registros y ${data.boda.length} registros extra.\n\nIMPORTANTE: esto reemplazará todos los datos actuales de esta app en este navegador. ¿Continuar?`)) return;
-    const previous = localStorage.getItem(LOCAL_KEY);
+    if(vaultLocked || vaultClosing) throw Error('Primero desbloqueá la bóveda.');
+    await vaultQueue; // Evitar que un guardado anterior sobrescriba la restauración.
+    if(vaultLocked || vaultClosing || readGeneration!==vaultGeneration) throw Error('La sesión cambió durante la restauración.');
+    const previous=vaultPayload();
+    const restoreGeneration=vaultGeneration;
     try {
-      const payload = JSON.stringify({items:data.items,boda:data.boda,settings:data.settings});
-      localStorage.setItem(LOCAL_KEY,payload);
-      items.clear(); boda.clear();
-      for (const [id,v] of data.items) items.set(id,v);
-      for (const [id,v] of data.boda) boda.set(id,v);
-      settings = data.settings;
-      toast('Respaldo restaurado. Revisá los movimientos.'); go('resumen');
-    } catch(e) {
-      if (previous === null) localStorage.removeItem(LOCAL_KEY);
-      else localStorage.setItem(LOCAL_KEY,previous);
-      throw e;
-    }
+      if(restoreGeneration!==vaultGeneration || vaultClosing || vaultLocked) throw Error('La sesión cambió durante la restauración.');
+      applyVaultPayload(JSON.stringify({items:data.items,boda:data.boda,settings:data.settings}));
+      await saveLocal();
+      toast('Respaldo restaurado y cifrado. Revisá los movimientos.'); go('resumen');
+    } catch(e){if(restoreGeneration===vaultGeneration && !vaultLocked && !vaultClosing) applyVaultPayload(previous);throw e;}
+
   } catch(e) { alert('No se pudo importar el respaldo: '+e.message); }
 }
 
@@ -1419,14 +1515,11 @@ function vAjustes(){
       h('button',{type:'button', class:'btn primary', onclick: async () => { try { await saveSettings({tc: num(tcInput.value) || ''}); toast('Tipo de cambio guardado'); } catch(e){ toast(dbError(e)); } }}, 'Guardar'))));
 
   out.push(panel('Tus datos', null,
-    h('p',{class:'note', style:'margin-top:0'}, persistent ? 'Se guardan en un espacio privado de tu cuenta: aunque compartas esta página, nadie más ve tus cifras.' : 'Datos locales en este navegador SIN cifrado. Los respaldos .mfin se cifran únicamente en HTTPS. No ingreses datos reales hasta verificar la seguridad y la recuperación.'),
+    h('p',{class:'note', style:'margin-top:0'}, persistent ? 'Los datos se guardan en este navegador.' : 'Bóveda cifrada en este navegador. Versión de prueba: usá únicamente movimientos ficticios y mantené respaldos .mfin.'),
     h('div',{class:'toolbar'},
-      h('button',{type:'button', class:'btn', onclick: exportXlsx, disabled: !list('mov').length}, 'Descargar movimientos (.xlsx)'),
       h('button',{type:'button', class:'btn primary', onclick: exportEncrypted}, 'Crear respaldo cifrado (.mfin)'),
       h('input',{id:'encrypted-backup-file',type:'file',accept:'.mfin,application/json',hidden:true,onchange:e=>{importEncrypted(e.target.files[0]);e.target.value='';}}),
       h('button',{type:'button',class:'btn',onclick:()=>document.getElementById('encrypted-backup-file').click()},'Restaurar respaldo cifrado (.mfin)'),
-      h('input',{id:'backup-file',type:'file',accept:'.json,application/json',hidden:true,onchange:e=>{importBackupFile(e.target.files[0]);e.target.value='';}}),
-      h('button',{type:'button',class:'btn',onclick:()=>document.getElementById('backup-file').click()},'Importar respaldo antiguo de prueba (.json)'),
       state.confirmWipe
         ? [h('button',{type:'button', class:'btn danger', onclick: wipeAll}, `Sí, borrar ${items.size} registros`), h('button',{type:'button', class:'btn', onclick:() => { state.confirmWipe = false; render(); }}, 'Cancelar')]
         : h('button',{type:'button', class:'btn danger', disabled: !items.size, onclick:() => { state.confirmWipe = true; render(); }}, 'Borrar todo'))));
@@ -1436,11 +1529,12 @@ function vAjustes(){
 /* ---------- navegación y render ---------- */
 const TABS = [['resumen','Resumen'],['movs','Movimientos'],['pres','Presupuesto'],['cobros','Cobros'],['cuentas','Cuentas'],['boda','Boda']];
 const VIEWS = {resumen:vResumen, movs:vMovs, pres:vPres, cobros:vCobros, cuentas:vCuentas, boda:vBoda, ajustes:vAjustes};
-function go(tab){ state.tab = tab; lsSet('tab', tab); render(); window.scrollTo({top:0}); }
+function go(tab){ if(vaultLocked || vaultClosing)return; state.tab = tab; lsSet('tab', tab); render(); window.scrollTo({top:0}); }
 let raf = 0;
 function renderSoon(){ cancelAnimationFrame(raf); raf = requestAnimationFrame(doRender); }
 const render = renderSoon;
 function doRender(){
+  if (vaultLocked || vaultClosing) return;
   if (!VIEWS[state.tab]) state.tab = 'resumen';
   const tabs = $('#tabs');
   tabs.replaceChildren(...TABS.map(([k,l]) => h('button',{type:'button', 'aria-current': state.tab === k ? 'page' : null, onclick:() => go(k)}, svg(ICONS[k === 'boda' ? projIconKey() : k]), h('span',null, k === 'boda' ? (projName().length > 11 ? 'Extra' : projName()) : l))));
@@ -1460,9 +1554,7 @@ dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
 function demoBoot(){
   persistent = false; loaded = true; bodaOK = true;
   settings = {};
-  const restored = loadLocal();
-  setSync(restored ? 'Guardado local (sin cifrar)' : 'Prueba limpia · sin datos', restored ? 'ok' : 'warn');
-  render();
+  loaded=false; setSync('Bóveda bloqueada','warn'); showVault();
 }
 demoBoot();
 </script>
