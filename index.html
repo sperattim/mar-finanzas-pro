@@ -1,4 +1,4 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body><div style="background:#fff5db;color:#503d16;padding:9px 12px;font:12px -apple-system,sans-serif">VERSIÓN 5.0 CANDIDATA · Bóveda cifrada. No ingreses datos reales hasta completar la revisión de seguridad.</div>
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body><div style="background:#fff5db;color:#503d16;padding:9px 12px;font:12px -apple-system,sans-serif">VERSIÓN 5.1 REVISIÓN · Bóveda cifrada. No ingreses datos reales hasta completar la revisión de seguridad.</div>
 <title>Mar Finanzas PRO — Bóveda v4.1 (prueba)</title>
 <style>
 /* Layout: app de una columna, pestañas abajo en el teléfono y arriba en pantallas anchas; las cifras en mono tabular */
@@ -1329,36 +1329,7 @@ function handleWorkbook(wb, source){
   if (!data.length){ state.importBusy = ''; toast('No encontré hojas conocidas en ese archivo (Movimientos, Cuentas, Tarjetas…).'); render(); return; }
   state.importPreview = {data, source}; state.importBusy = ''; render();
 }
-async function fromDrive(){
-  const id = sheetIdFrom($('#sheet-url').value);
-  if (!id){ toast('Pegá el enlace de tu planilla de Google Sheets.'); return; }
-  const mcp = await window.claude?.use?.('mcp');
-  if (!mcp){ toast('Google Drive no está disponible en esta vista. Descargá la planilla como .xlsx y subila.'); return; }
-  state.importBusy = 'Trayendo la planilla de Google Drive…'; render();
-  try {
-    const r = await mcp.callTool('Google Drive','download_file_content',{fileId:id, exportMimeType:XLSX_MIME},{cache:false});
-    let p = r.payload; if (typeof p === 'string'){ try { p = JSON.parse(p); } catch {} }
-    const b64 = p && p.content;
-    if (!b64 || typeof b64 !== 'string') throw {code:'shape'};
-    const bin = atob(b64); const bytes = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    await saveSettings({sheetId: id});
-    handleWorkbook(XLSX.read(bytes, {type:'array'}), 'Google Sheets');
-  } catch (e){
-    state.importBusy = '';
-    const msg = {
-      needs_reauth:'Reconectá Google Drive en claude.ai → Configuración → Conectores y probá de nuevo.',
-      server_not_connected:'Agregá el conector Google Drive en claude.ai → Configuración → Conectores.',
-      selection_required:'Elegí cuál conector de Google Drive usar en el aviso de claude.ai.',
-      not_in_manifest:'No le diste permiso a Google Drive para esta página. Habilitalo en el menú Permisos del artifact.',
-      blocked_by_policy:'Tu organización bloquea Google Drive para esta página.',
-      approval_required:'Hace falta tu aprobación. Tocá el botón otra vez y aceptá el aviso.',
-      server_unavailable:'Google Drive no respondió. Probá de nuevo en un minuto.',
-      tool_error:'Google Drive no pudo exportar el archivo. Revisá que el enlace sea de tu planilla y que tengas acceso.',
-      shape:'Google Drive devolvió algo que no es una planilla. Usá la opción de subir el .xlsx.'
-    }[e && e.code] || ('No pude traer la planilla' + (e && e.message ? `: ${e.message}` : '.'));
-    toast(msg); render();
-  }
-}
+
 function fromFile(file){
   if (!file) return;
   state.importBusy = 'Leyendo el archivo…'; render();
@@ -1404,15 +1375,7 @@ function offerFile(filename, data){
     toast('Descarga solicitada. Comprobá que el archivo esté en Archivos.');
   } catch(e) { alert('No se pudo iniciar la descarga: ' + e.message); }
 }
-function exportXlsx(){ if (typeof XLSX === 'undefined') { alert('La exportación Excel está desactivada en esta prueba local.'); return; }
-  const movs = list('mov').sort((a,b) => (a.fecha||'').localeCompare(b.fecha||''));
-  const rows = [['Fecha','Tipo','Categoria','Subcategoria','Descripcion','Origen','Destino','Moneda','Monto','TC_Gs','Monto_Gs','Mes','Notas'],
-    ...movs.map(m => [fmtDate(m.fecha), m.tipo, m.categoria, m.subcategoria, m.descripcion, m.origen, m.destino, m.moneda, num(m.monto), num(m.tc) || 1, Math.round(movGs(m)), (m.fecha||'').slice(0,7), m.notas])];
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), 'Movimientos');
-  const buf = XLSX.write(wb, {type:'array', bookType:'xlsx'});
-  offerFile(`movimientos-${TODAY}.xlsx`, new Blob([buf]));
-}
+
 // Respaldo cifrado: PBKDF2-SHA-256 (600.000 iteraciones) + AES-256-GCM.
 // Web Crypto exige HTTPS o localhost; nunca se degrada a texto plano.
 function secureCrypto(){
@@ -1443,6 +1406,10 @@ async function exportEncrypted(){
   if (again!==password){ alert('Las contraseñas no coinciden. No se creó ningún archivo.'); return; }
   try {
     const backupGeneration=vaultGeneration;
+    // El respaldo debe representar un estado ya guardado, no cambios pendientes.
+    await vaultQueue;
+    if (vaultSaveError) throw Error('Hay un guardado fallido. No se creó un respaldo potencialmente inconsistente.');
+    if(vaultLocked || vaultClosing || backupGeneration!==vaultGeneration) throw Error('Se bloqueó la bóveda. Reintentá el respaldo.');
     const salt=crypto.getRandomValues(new Uint8Array(16));
     const iv=crypto.getRandomValues(new Uint8Array(12));
     const key=await deriveBackupKey(password,salt,'encrypt');
@@ -1518,7 +1485,7 @@ function vAjustes(){
     h('p',{class:'note', style:'margin-top:0'}, persistent ? 'Los datos se guardan en este navegador.' : 'Bóveda cifrada en este navegador. Versión de prueba: usá únicamente movimientos ficticios y mantené respaldos .mfin.'),
     h('div',{class:'toolbar'},
       h('button',{type:'button', class:'btn primary', onclick: exportEncrypted}, 'Crear respaldo cifrado (.mfin)'),
-      h('input',{id:'encrypted-backup-file',type:'file',accept:'.mfin,application/json',hidden:true,onchange:e=>{importEncrypted(e.target.files[0]);e.target.value='';}}),
+      h('input',{id:'encrypted-backup-file',type:'file',accept:'.mfin',hidden:true,onchange:e=>{importEncrypted(e.target.files[0]);e.target.value='';}}),
       h('button',{type:'button',class:'btn',onclick:()=>document.getElementById('encrypted-backup-file').click()},'Restaurar respaldo cifrado (.mfin)'),
       state.confirmWipe
         ? [h('button',{type:'button', class:'btn danger', onclick: wipeAll}, `Sí, borrar ${items.size} registros`), h('button',{type:'button', class:'btn', onclick:() => { state.confirmWipe = false; render(); }}, 'Cancelar')]
