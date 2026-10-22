@@ -421,7 +421,7 @@ function vaultEnvelope(){
   return env;
 }
 function saveLocal(){
-  if(vaultLocked||vaultClosing||!vaultKey) return Promise.reject(Error('La bóveda está bloqueada'));
+  if(vaultLocked||!vaultKey) return Promise.reject(Error('La bóveda está bloqueada'));
   const snapshot=vaultPayload(), generation=vaultGeneration;
   const job=vaultQueue.then(async()=>{
     if(generation!==vaultGeneration||vaultLocked) throw Error('Sesión cerrada antes de guardar');
@@ -433,6 +433,33 @@ function saveLocal(){
   });
   vaultQueue=job.catch(e=>{vaultSaveError=e;});
   return job.catch(e=>{alert('No se pudo guardar el cambio cifrado: '+e.message);throw e;});
+}
+// Serializa mutaciones: una operación fallida no deja el estado visible sin guardar.
+let mutationQueue = Promise.resolve();
+function commitMutation(change){
+  // Aceptar o rechazar SINCRÓNICAMENTE: al cerrar, las operaciones ya aceptadas terminan.
+  if(vaultLocked||vaultClosing||!vaultKey) return Promise.reject(Error('La bóveda se está bloqueando'));
+  const session=vaultGeneration;
+  const work=mutationQueue.then(async()=>{
+    if(vaultLocked||!vaultKey||session!==vaultGeneration) throw Error('La bóveda está bloqueada');
+    // Tomar el estado confirmado antes de modificarlo.
+    await vaultQueue;
+    if(vaultSaveError) throw Error('Hay un error de guardado pendiente. Cerrá y volvé a abrir la bóveda.');
+    if(vaultLocked||session!==vaultGeneration) throw Error('La sesión cambió');
+    const before=vaultPayload();
+    try {
+      change();
+      await saveLocal();
+    } catch(e){
+      if(!vaultLocked && session===vaultGeneration){
+        applyVaultPayload(before);
+        render();
+      }
+      throw e;
+    }
+  });
+  mutationQueue=work.catch(()=>{});
+  return work;
 }
 function showVault(message=''){
   let overlay=document.getElementById('vault-lock');
@@ -446,7 +473,7 @@ function showVault(message=''){
   const isNew=!localStorage.getItem(VAULT_KEY);if(!isNew)confirmPass.hidden=true;
   const btn=document.createElement('button');btn.textContent=isNew?'Crear bóveda cifrada':'Desbloquear';btn.style.cssText='background:#1c5d86;color:white;padding:12px;border:0;border-radius:8px;width:100%;margin-top:8px;font-weight:bold';
   const error=document.createElement('p');error.style.color='#b0392f';
-  const note=document.createElement('p');note.style.cssText='font-size:12px;color:#596674';note.textContent='PRUEBA: solo datos ficticios. Conservá tu respaldo .mfin. Si olvidás esta contraseña, necesitás un respaldo para recuperar tus datos.';
+  const note=document.createElement('p');note.style.cssText='font-size:12px;color:#596674';note.textContent='Bóveda cifrada local. Conservá respaldos .mfin en un lugar seguro. La seguridad y resistencia a cierres inesperados aún requieren verificación.';
   btn.onclick=async()=>{
     btn.disabled=true;error.textContent='';
     try{
@@ -479,7 +506,7 @@ function showVault(message=''){
 }
 async function lockVault(){
   if(vaultLocked || vaultClosing)return;
-  // Ocultar datos inmediatamente, antes de esperar las escrituras cifradas.
+  // Ocultar datos inmediatamente. Las mutaciones ya aceptadas siguen en cola.
   vaultClosing=true;
   cancelAnimationFrame(raf);
   const view=document.getElementById('view'); if(view) view.replaceChildren();
@@ -487,6 +514,7 @@ async function lockVault(){
   const fab=document.getElementById('fab'); if(fab) fab.hidden=true;
   showVault('Bóveda bloqueada. Terminando guardados pendientes si los hay…');
   try {
+    await mutationQueue;
     await vaultQueue;
   } finally {
     vaultLocked=true;vaultClosing=false;vaultGeneration++;vaultKey=null;
@@ -508,31 +536,30 @@ async function withRetry(fn){
 async function saveItem(id, data){
   if(vaultClosing || vaultLocked) throw Error('La bóveda está bloqueada');
   if (persistent){ const ref = id ? itemsCol.doc(id) : itemsCol.doc(); await withRetry(() => ref.set(data)); }
-  else { items.set(id || newId(), data); await saveLocal(); render(); }
+  else { await commitMutation(()=>items.set(id || newId(), data)); render(); }
 }
 async function deleteItem(id){
   if(vaultClosing || vaultLocked) throw Error('La bóveda está bloqueada');
   if (persistent) await withRetry(() => itemsCol.doc(id).delete());
-  else { items.delete(id); await saveLocal(); render(); }
+  else { await commitMutation(()=>items.delete(id)); render(); }
 }
 const isBoda = kind => SCHEMA[kind] && SCHEMA[kind].store === 'boda';
 async function saveRec(kind, id, data){
   if(vaultClosing || vaultLocked) throw Error('La bóveda está bloqueada');
   if (!isBoda(kind)) return saveItem(id, data);
   if (persistent){ const ref = id ? bodaCol.doc(id) : bodaCol.doc(); await withRetry(() => ref.set(data)); }
-  else { boda.set(id || newId(), data); await saveLocal(); render(); }
+  else { await commitMutation(()=>boda.set(id || newId(), data)); render(); }
 }
 async function deleteRec(kind, id){
   if(vaultClosing || vaultLocked) throw Error('La bóveda está bloqueada');
   if (!isBoda(kind)) return deleteItem(id);
   if (persistent) await withRetry(() => bodaCol.doc(id).delete());
-  else { boda.delete(id); await saveLocal(); render(); }
+  else { await commitMutation(()=>boda.delete(id)); render(); }
 }
 async function saveSettings(patch){
   if(vaultClosing || vaultLocked) throw Error('La bóveda está bloqueada');
-  settings = {...settings, ...patch};
-  if (persistent) await withRetry(() => settingsRef.set(settings));
-  else await saveLocal();
+  if (persistent){ settings = {...settings, ...patch}; await withRetry(() => settingsRef.set(settings)); }
+  else await commitMutation(()=>{settings={...settings,...patch};});
   render();
 }
 function dbError(e){
@@ -1354,14 +1381,14 @@ async function applyImport(){
       let d = 0;
       await runPool(old.map(id => () => itemsCol.doc(id).delete()), 4, () => tick(++d));
       await runPool(data.map(o => () => itemsCol.doc().set(o)), 4, () => tick(++d));
-    } else { items.clear(); for (const o of data) items.set(newId(), o); await saveLocal(); }
+    } else { await commitMutation(()=>{items.clear(); for (const o of data) items.set(newId(), o);}); }
     await saveSettings({lastImport: new Date().toISOString()});
     state.importPreview = null; state.importBusy = ''; toast(`Importados ${data.length} registros.`); go('resumen');
   } catch (e){ state.importBusy = ''; toast(dbError(e)); render(); }
 }
 async function wipeAll(){
   state.importBusy = 'Borrando…'; render();
-  try { if (persistent) await runPool([...items.keys()].map(id => () => itemsCol.doc(id).delete()), 4, () => {}); else { items.clear(); await saveLocal(); } state.confirmWipe = false; state.importBusy = ''; toast('Datos borrados'); render(); }
+  try { if (persistent) await runPool([...items.keys()].map(id => () => itemsCol.doc(id).delete()), 4, () => {}); else { await commitMutation(()=>items.clear()); } state.confirmWipe = false; state.importBusy = ''; toast('Datos borrados'); render(); }
   catch (e){ state.importBusy = ''; toast(dbError(e)); render(); }
 }
 function offerFile(filename, data){
@@ -1407,6 +1434,7 @@ async function exportEncrypted(){
   try {
     const backupGeneration=vaultGeneration;
     // El respaldo debe representar un estado ya guardado, no cambios pendientes.
+    await mutationQueue;
     await vaultQueue;
     if (vaultSaveError) throw Error('Hay un guardado fallido. No se creó un respaldo potencialmente inconsistente.');
     if(vaultLocked || vaultClosing || backupGeneration!==vaultGeneration) throw Error('Se bloqueó la bóveda. Reintentá el respaldo.');
@@ -1459,16 +1487,14 @@ async function importBackupFile(file){
     if (!validEntries(data.items) || !validEntries(data.boda)) throw Error('Los registros no son válidos.');
     if (!confirm(`Respaldo: ${data.items.length} registros y ${data.boda.length} registros extra.\n\nIMPORTANTE: esto reemplazará todos los datos actuales de esta app en este navegador. ¿Continuar?`)) return;
     if(vaultLocked || vaultClosing) throw Error('Primero desbloqueá la bóveda.');
-    await vaultQueue; // Evitar que un guardado anterior sobrescriba la restauración.
+    await mutationQueue; // Evitar mutaciones concurrentes antes de restaurar.
+    await vaultQueue;
     if(vaultLocked || vaultClosing || readGeneration!==vaultGeneration) throw Error('La sesión cambió durante la restauración.');
-    const previous=vaultPayload();
-    const restoreGeneration=vaultGeneration;
-    try {
-      if(restoreGeneration!==vaultGeneration || vaultClosing || vaultLocked) throw Error('La sesión cambió durante la restauración.');
-      applyVaultPayload(JSON.stringify({items:data.items,boda:data.boda,settings:data.settings}));
-      await saveLocal();
-      toast('Respaldo restaurado y cifrado. Revisá los movimientos.'); go('resumen');
-    } catch(e){if(restoreGeneration===vaultGeneration && !vaultLocked && !vaultClosing) applyVaultPayload(previous);throw e;}
+    // La restauración se ejecuta como una sola mutación serializada.
+    // commitMutation administra su propia reversión si falla el cifrado/guardado.
+    // No restaurar un snapshot desde fuera de la cola: podría pisar cambios posteriores.
+    await commitMutation(()=>applyVaultPayload(JSON.stringify({items:data.items,boda:data.boda,settings:data.settings})));
+    toast('Respaldo restaurado y cifrado. Revisá los movimientos.'); go('resumen');
 
   } catch(e) { alert('No se pudo importar el respaldo: '+e.message); }
 }
