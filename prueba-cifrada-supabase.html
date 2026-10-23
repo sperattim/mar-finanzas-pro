@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mar Finanzas PRO · Prueba aislada de sincronización</title>
+<style>
+:root{color-scheme:light;--bg:#F5F1EA;--card:#fff;--ink:#4A342A;--muted:#6f6258;--line:#D7C9B8;--accent:#7D5A44;--ok:#216e4b;--bad:#a22f2f}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,Segoe UI,sans-serif;padding:22px}.wrap{max-width:720px;margin:auto}.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px;margin:16px 0}h1{font-size:1.5rem;margin:0 0 6px}h2{font-size:1.1rem;margin:0 0 10px}.muted{color:var(--muted);font-size:.93rem}.field{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;margin:6px 0 12px;font:inherit}.btn{background:var(--accent);color:white;border:0;border-radius:10px;padding:12px 15px;font:inherit;font-weight:650;cursor:pointer;margin:4px 4px 4px 0}.btn.secondary{background:#e9dfd3;color:var(--ink)}.btn:disabled{opacity:.5;cursor:not-allowed}.status{white-space:pre-wrap;overflow-wrap:anywhere;background:#f8f4ef;border:1px solid var(--line);border-radius:10px;padding:12px;min-height:50px}.safe{font-weight:700;color:var(--ok)}.warning{border-left:4px solid #b87923;padding-left:12px}.small{font-size:.86rem}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body><main class="wrap">
+  <div class="card">
+    <h1>Mar Finanzas PRO · Prueba aislada</h1>
+    <p class="muted">Prueba técnica de ida y vuelta con datos inventados. Esta página no lee ni modifica la bóveda local ni la tabla real <code>encrypted_vaults</code>.</p>
+    <p class="warning small"><strong>Importante:</strong> no pegues aquí la contraseña de tu bóveda ni la frase de cifrado en el chat. La frase solo se usa en este navegador y nunca se envía al servidor.</p>
+  </div>
+  <section class="card">
+    <h2>1. Sesión de nube</h2>
+    <label for="email">Correo de sincronización</label><input id="email" class="field" type="email" autocomplete="username" placeholder="Tu correo">
+    <label for="accountPass">Contraseña de la cuenta de sincronización</label><input id="accountPass" class="field" type="password" autocomplete="current-password" placeholder="Contraseña de sincronización">
+    <button class="btn" id="login">Iniciar sesión</button><button class="btn secondary" id="check">Comprobar sesión</button>
+    <div class="status" id="sessionStatus">Comprobando sesión…</div>
+  </section>
+  <section class="card">
+    <h2>2. Prueba con datos ficticios</h2>
+    <p class="muted">La prueba crea un movimiento inventado, lo cifra en el navegador, lo envía a una función de prueba, verifica que vuelva igual y descifra la respuesta. La fila temporal se borra dentro de la misma transacción. No se toca tu bóveda real.</p>
+    <label for="phrase">Frase de cifrado compartida (mínimo 12 caracteres)</label><input id="phrase" class="field" type="password" autocomplete="off" placeholder="Ingresá tu frase guardada de forma privada">
+    <button class="btn" id="run">Ejecutar prueba ficticia</button>
+    <div class="status" id="result">Todavía no se ejecutó la prueba.</div>
+  </section>
+  <section class="card small">
+    <strong>Qué significa el resultado</strong>
+    <p>Si dice <span class="safe">PRUEBA EXITOSA</span>, se comprobó el acceso autenticado, la escritura/lectura temporal, el cifrado y el descifrado de datos ficticios. Esto no es una auditoría completa ni significa que la sincronización real esté lista para producción.</p>
+    <p>No pulses ningún botón de subida o descarga en la app principal hasta revisar el resultado.</p>
+  </section>
+</main>
+<script>
+(() => {
+'use strict';
+const URL = 'https://ontlikckawfftawrgabc.supabase.co';
+const KEY = 'sb_publishable_7RFLWg7UCxI8aP-LcLoRXA_YXDKcny3';
+const $ = id => document.getElementById(id);
+let client;
+function getClient(){ if(!window.supabase?.createClient) throw new Error('No cargó la librería de conexión. Revisá internet y recargá.'); if(!client) client=window.supabase.createClient(URL,KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}}); return client; }
+function b64(bytes){let s='';for(const b of bytes)s+=String.fromCharCode(b);return btoa(s)}
+function un64(s){const raw=atob(s);return Uint8Array.from(raw,c=>c.charCodeAt(0))}
+async function derive(pass,salt,usage){const material=await crypto.subtle.importKey('raw',new TextEncoder().encode(pass),'PBKDF2',false,['deriveKey']);return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:600000,hash:'SHA-256'},material,{name:'AES-GCM',length:256},false,[usage])}
+async function encrypt(raw,pass){const salt=crypto.getRandomValues(new Uint8Array(16));const iv=crypto.getRandomValues(new Uint8Array(12));const key=await derive(pass,salt,'encrypt');const data=await crypto.subtle.encrypt({name:'AES-GCM',iv},key,new TextEncoder().encode(raw));return JSON.stringify({format:'mar-finanzas-sync-vault',version:1,kdf:'PBKDF2-SHA256',iterations:600000,cipher:'AES-256-GCM',salt:b64(salt),iv:b64(iv),data:b64(new Uint8Array(data))})}
+async function decrypt(envelope,pass){const e=JSON.parse(envelope);if(e.format!=='mar-finanzas-sync-vault'||e.cipher!=='AES-256-GCM'||e.iterations!==600000)throw new Error('Formato de prueba no reconocido.');const key=await derive(pass,un64(e.salt),'decrypt');const clear=await crypto.subtle.decrypt({name:'AES-GCM',iv:un64(e.iv)},key,un64(e.data));return new TextDecoder().decode(clear)}
+function errText(e){const m=String(e?.message||e||'Error desconocido');if(/test_encrypted_vault_roundtrip|function.*not found|could not find the function/i.test(m))return 'Falta ejecutar prueba_cifrada_supabase.sql en SQL Editor. No se tocó la bóveda real.';if(/invalid login credentials/i.test(m))return 'Correo o contraseña de sincronización incorrectos.';if(/email not confirmed/i.test(m))return 'Confirmá el correo desde el mensaje de Supabase y volvé a iniciar sesión.';if(/row-level security|permission denied|not allowed/i.test(m))return 'Supabase rechazó el acceso. No se modificó la bóveda real.';return m.slice(0,400)}
+async function showSession(){try{const {data,error}=await getClient().auth.getSession();if(error)throw error;const email=data.session?.user?.email;if(email){$('email').value=email;$('sessionStatus').textContent='Sesión activa para '+email+'.';}else $('sessionStatus').textContent='No hay sesión activa en este navegador. Iniciá sesión abajo.';}catch(e){$('sessionStatus').textContent=errText(e)}}
+$('login').addEventListener('click',async()=>{try{$('sessionStatus').textContent='Iniciando sesión…';const email=$('email').value.trim(),password=$('accountPass').value;if(!email||!password)throw new Error('Ingresá el correo y la contraseña de sincronización.');const {data,error}=await getClient().auth.signInWithPassword({email,password});if(error)throw error;$('sessionStatus').textContent='Sesión activa para '+(data.user?.email||email)+'.';}catch(e){$('sessionStatus').textContent=errText(e)}});
+$('check').addEventListener('click',showSession);
+$('run').addEventListener('click',async()=>{const button=$('run');button.disabled=true;$('result').textContent='Ejecutando prueba con datos inventados…';try{if(!window.isSecureContext||!crypto?.subtle)throw new Error('El navegador debe abrir esta página desde HTTPS.');const pass=$('phrase').value;if(pass.length<12)throw new Error('Ingresá la frase de cifrado (mínimo 12 caracteres).');const {data:sessionData,error:sessionError}=await getClient().auth.getSession();if(sessionError)throw sessionError;if(!sessionData.session)throw new Error('Primero iniciá sesión en la cuenta de sincronización.');const fake={items:[{id:'SYNC-TEST-ONLY',kind:'movimiento',concepto:'MOVIMIENTO FICTICIO — NO REAL',monto:12345,moneda:'PYG',fecha:'2099-01-01'}],boda:[],settings:{tc:'7000'},probe:'MAR-FINANZAS-ROUNDTRIP-TEST-ONLY'};const raw=JSON.stringify(fake);const encrypted=await encrypt(raw,pass);const id=crypto.randomUUID();const {data,error}=await getClient().rpc('test_encrypted_vault_roundtrip',{test_id:id,new_payload:encrypted});if(error)throw error;const returned=typeof data==='string'?data:data?.test_encrypted_vault_roundtrip;if(typeof returned!=='string')throw new Error('El servidor no devolvió el sobre cifrado esperado.');const clear=await decrypt(returned,pass);if(clear!==raw)throw new Error('La comprobación de integridad no coincidió. La bóveda real no se tocó.');const parsed=JSON.parse(clear);if(parsed.probe!=='MAR-FINANZAS-ROUNDTRIP-TEST-ONLY'||parsed.items[0].monto!==12345)throw new Error('Los datos ficticios no coinciden.');$('result').innerHTML='<strong class="safe">PRUEBA EXITOSA</strong>\n\n✓ Sesión autenticada\n✓ Cifrado AES-256-GCM en el navegador\n✓ Envío y lectura temporal en Supabase\n✓ Descifrado e integridad correctos\n✓ La fila de prueba se eliminó dentro de la transacción\n✓ No se tocó public.encrypted_vaults ni la bóveda local';}catch(e){$('result').textContent='No se completó la prueba: '+errText(e)}finally{button.disabled=false}});
+showSession();
+})();
+</script>
+</body></html>
