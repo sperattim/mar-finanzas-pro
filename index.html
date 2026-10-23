@@ -1,5 +1,5 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body><div style="background:#fff5db;color:#503d16;padding:9px 12px;font:12px -apple-system,sans-serif">VERSIÓN 5.1 REVISIÓN · Bóveda cifrada. No ingreses datos reales hasta completar la revisión de seguridad.</div>
-<title>Mar Finanzas PRO — Bóveda v4.1 (prueba)</title>
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body><div style="background:#EADFD2;color:#4A342A;padding:9px 12px;font:12px -apple-system,sans-serif">DISEÑO LINEN · Bóveda cifrada. Seguridad y restauración todavía en revisión: conservá respaldos .mfin.</div>
+<title>Mar Finanzas PRO — Linen</title>
 <style>
 /* Layout: app de una columna, pestañas abajo en el teléfono y arriba en pantallas anchas; las cifras en mono tabular */
 :root{
@@ -154,6 +154,18 @@ main{padding-block:18px}
 .cal-row.done{opacity:.55}
 .run{font-size:.75rem;color:var(--muted)}
 
+/* Casa: panel de planificación; no crea registros ni afecta saldos. */
+.casa-kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0}
+.casa-kpi{border:1px solid var(--line);background:var(--bg);padding:12px;border-radius:var(--r);min-width:0}
+.casa-kpi .num{font-size:1.15rem;font-weight:600;white-space:normal;overflow-wrap:anywhere}
+.casa-line{display:flex;justify-content:space-between;align-items:baseline;gap:16px;padding:9px 0;border-bottom:1px solid var(--line)}
+.casa-line .num{flex-shrink:0}
+.casa-line:last-child{border-bottom:0}
+.casa-label{font-size:.82rem;color:var(--muted)}
+.casa-status{display:inline-block;padding:2px 7px;border-radius:999px;border:1px solid var(--line);font-size:.72rem;color:var(--muted);margin-left:5px}
+@media(max-width:430px){.casa-kpis{grid-template-columns:1fr}.casa-line{gap:6px}.casa-line .num{font-size:.88rem}}
+
+
 .banner{border:1px solid var(--line);background:var(--warn-soft);color:var(--ink);border-radius:var(--r);padding:10px 14px;font-size:.88rem}
 .note{font-size:.82rem;color:var(--muted)}
 
@@ -191,7 +203,112 @@ dialog form{display:flex;flex-direction:column;max-height:calc(100dvh - 32px)}
 .stack{display:flex;flex-direction:column;gap:10px}
 .import-sum{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 16px;font-size:.9rem}
 @media (prefers-reduced-motion:no-preference){.view{animation:in .18s ease-out}@keyframes in{from{opacity:.4;transform:translateY(4px)}to{opacity:1;transform:none}}}
-.steps{list-style:none;margin:0 0 12px;padding:0;display:flex;flex-direction:column;gap:14px}.step{display:grid;grid-template-columns:30px minmax(0,1fr);gap:10px;align-items:start}.step-n{width:28px;height:28px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-weight:700;font-family:var(--f-display)}.step .note{margin:4px 0 0}</style>
+.steps{list-style:none;margin:0 0 12px;padding:0;display:flex;flex-direction:column;gap:14px}.step{display:grid;grid-template-columns:30px minmax(0,1fr);gap:10px;align-items:start}.step-n{width:28px;height:28px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-weight:700;font-family:var(--f-display)}.step .note{margin:4px 0 0}
+/* ================================================================
+   PALETA LINEN · KHAKI · CAMEL · COCOA · ESPRESSO
+   Personalización VISUAL. No cambia la lógica ni los datos de la bóveda.
+   Referencia: Linen #F5F1EA, Khaki #D7C9B8, Camel #B2967D,
+               Cocoa #7D5A44, Espresso #4A342A.
+   ================================================================ */
+:root:not([data-theme="dark"]), :root[data-theme="light"] {
+  color-scheme: light;
+  --linen:#F5F1EA; --khaki:#D7C9B8; --camel:#B2967D;
+  --cocoa:#7D5A44; --espresso:#4A342A;
+  --bg:#F5F1EA; --surface:#FFFCF8; --sunk:#EAE1D7;
+  --line:#D7C9B8; --ink:#4A342A; --muted:#706055;
+  --accent:#7D5A44; --accent-ink:#FFFFFF; --accent-soft:#E9DDD1;
+  --pos:#3F6549; --neg:#A3413B; --warn:#865B2F;
+  --pos-soft:#E4EEE3; --neg-soft:#F4E2DE; --warn-soft:#F5EAD8;
+  --r:17px;
+  --f-display:Georgia, "Iowan Old Style", "Baskerville", "Times New Roman", serif;
+  --f-body:"Avenir Next", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+  --f-num:"SF Pro Text", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+}
+/* La versión cálida es la predeterminada, incluso si el SO está en modo oscuro.
+   Se conserva soporte de tema oscuro explícito en el propio documento. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --linen:#F5F1EA; --khaki:#D7C9B8; --camel:#B2967D;
+  --cocoa:#7D5A44; --espresso:#4A342A;
+  --bg:#261D19; --surface:#352820; --sunk:#45352C;
+  --line:#70584A; --ink:#F5F1EA; --muted:#D7C9B8;
+  --accent:#DFC0A3; --accent-ink:#261D19; --accent-soft:#523D32;
+  --pos:#A6D0AE; --neg:#F3A9A0; --warn:#F1D2A2;
+  --pos-soft:#294034; --neg-soft:#593A34; --warn-soft:#554634;
+  --r:17px;
+  --f-display:Georgia, "Iowan Old Style", "Baskerville", "Times New Roman", serif;
+  --f-body:"Avenir Next", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+  --f-num:"SF Pro Text", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+}
+body{
+  background:radial-gradient(ellipse 85% 30% at 90% 0%,color-mix(in srgb,var(--khaki) 18%,var(--bg)),transparent 75%),var(--bg);
+}
+header.top{
+  background:color-mix(in srgb,var(--bg) 94%,transparent);
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+  border-bottom-color:color-mix(in srgb,var(--line) 60%,transparent);
+}
+.brand h1{font-size:clamp(1.2rem,3vw,1.5rem);letter-spacing:-.035em;font-weight:500}
+.brand .gs{letter-spacing:.025em}
+.icon-btn{border-radius:12px;box-shadow:0 3px 12px rgba(74,52,42,.05)}
+nav.tabs{background:var(--surface);box-shadow:0 -4px 20px rgba(74,52,42,.07)}
+nav.tabs button[aria-current="page"]{background:var(--accent-soft);border-radius:12px 12px 0 0}
+@media(min-width:760px){
+  nav.tabs{box-shadow:none;background:color-mix(in srgb,var(--bg) 96%,transparent)}
+  nav.tabs button[aria-current="page"]{border-radius:12px 12px 0 0}
+}
+.panel,.kpi{
+  border-color:color-mix(in srgb,var(--line) 75%,var(--surface));
+  box-shadow:0 6px 22px rgba(74,52,42,.045);
+}
+.panel{padding:clamp(15px,2.8vw,22px)}
+.kpi{padding:15px 16px;min-height:80px}
+.kpi:nth-child(4n + 1){background:linear-gradient(135deg,var(--surface),color-mix(in srgb,var(--khaki) 15%,var(--surface)))}
+.kpi:nth-child(4n + 2){background:linear-gradient(135deg,var(--surface),color-mix(in srgb,var(--camel) 16%,var(--surface)))}
+.kpi:nth-child(4n + 3){background:linear-gradient(135deg,var(--surface),color-mix(in srgb,var(--cocoa) 9%,var(--surface)))}
+.kpi:nth-child(4n + 4){background:linear-gradient(135deg,var(--surface),color-mix(in srgb,var(--khaki) 27%,var(--surface)))}
+.hero{padding:12px 4px 8px}
+.hero .big{font-family:var(--f-display);font-weight:500;letter-spacing:-.035em}
+.eyebrow{letter-spacing:.115em}
+h2,h3{font-weight:500}
+.btn,.field,.toolbar select,.toolbar input,.fld input,.fld select,.fld textarea{
+  border-radius:12px;
+}
+.btn.primary,.fab{
+  background:var(--cocoa);
+  color:#FFFFFF;
+  border-color:var(--cocoa);
+}
+.btn.primary:hover,.fab:hover{background:var(--espresso);border-color:var(--espresso)}
+.btn:not(.primary):hover,.chip-opt:hover{background:var(--accent-soft)}
+.fab{box-shadow:0 8px 24px rgba(74,52,42,.23)}
+.seg-ctl{border-radius:12px}
+.chip,.chip-opt{border-radius:999px}
+.progress,.track{border-radius:999px}
+.seg,.bar-row .fill{border-radius:999px}
+.progress > div{background:var(--cocoa)}
+.bar-row .fill{background:var(--cocoa)}
+.cal-row:hover,.item:hover{background:color-mix(in srgb,var(--khaki) 17%,var(--surface))}
+.casa-kpi{background:color-mix(in srgb,var(--khaki) 12%,var(--surface));border-radius:14px}
+.banner{border-color:color-mix(in srgb,var(--camel) 70%,var(--line))}
+dialog{border:1px solid var(--line);border-radius:20px}
+dialog::backdrop{background:rgba(43,28,21,.5)}
+.dlg-h{padding-top:20px}
+.toast{border-radius:13px}
+@media (max-width:430px){
+  .brand{gap:6px}
+  .brand h1{font-size:1.23rem}
+  .brand .gs{font-size:.7rem}
+  nav.tabs button{font-size:.66rem}
+  .kpis{gap:9px}
+  .kpi{padding:12px 11px}
+  .kpi .v{font-size:.98rem}
+}
+@media(prefers-reduced-motion:reduce){
+  *{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}
+}
+</style>
 
 <header class="top"><div class="wrap">
   <div class="brand"><h1>Finanzas</h1><span class="gs">Gs. · USD</span></div>
@@ -474,6 +591,11 @@ function showVault(message=''){
   const btn=document.createElement('button');btn.textContent=isNew?'Crear bóveda cifrada':'Desbloquear';btn.style.cssText='background:#1c5d86;color:white;padding:12px;border:0;border-radius:8px;width:100%;margin-top:8px;font-weight:bold';
   const error=document.createElement('p');error.style.color='#b0392f';
   const note=document.createElement('p');note.style.cssText='font-size:12px;color:#596674';note.textContent='Bóveda cifrada local. Conservá respaldos .mfin en un lugar seguro. La seguridad y resistencia a cierres inesperados aún requieren verificación.';
+  const restoreInput=document.createElement('input');restoreInput.type='file';restoreInput.accept='.mfin,application/json';restoreInput.hidden=true;
+  const restoreBtn=document.createElement('button');restoreBtn.type='button';restoreBtn.textContent='Restaurar bóveda desde respaldo .mfin';restoreBtn.style.cssText='background:white;color:#1c5d86;padding:12px;border:1px solid #1c5d86;border-radius:8px;width:100%;margin-top:10px;font-weight:bold';
+  restoreBtn.onclick=()=>restoreInput.click();
+  restoreInput.onchange=async()=>{const f=restoreInput.files&&restoreInput.files[0];restoreInput.value='';if(f)await restoreEncryptedIntoNewVault(f);};
+  if(!isNew){restoreBtn.hidden=true;restoreInput.hidden=true;}
   btn.onclick=async()=>{
     btn.disabled=true;error.textContent='';
     try{
@@ -502,7 +624,7 @@ function showVault(message=''){
       pass.value='';confirmPass.value='';
     }catch(e){error.textContent=e.message;}finally{btn.disabled=false;}
   };
-  panel.append(heading,desc,pass,confirmPass,btn,error,note);overlay.append(panel);
+  panel.append(heading,desc,pass,confirmPass,btn,error,restoreBtn,restoreInput,note);overlay.append(panel);
 }
 async function lockVault(){
   if(vaultLocked || vaultClosing)return;
@@ -1054,6 +1176,60 @@ function vPres(){
   ];
 }
 
+/* Casa / gastos comunes: resumen de eventos EXISTENTES, sin nuevas partidas ni cambios en la bóveda. */
+function casaResumenFinanciero(evs){
+  const deCasa = evs.filter(e => /casa compartida/i.test(str(e.entidad)) ||
+    (/banco beige/i.test(str(e.entidad)) && /hipotec/i.test(norm(e.concepto))));
+  if (!deCasa.length) return null;
+  const find = re => deCasa.find(e => re.test(norm(e.concepto)));
+  const fondo = find(/aportes_adicionales_para_casa/);
+  const piscina = find(/^piscina_/);
+  const revoque = find(/^revoque_de_chalito/);
+  const hipoteca = find(/cuota_hipotecaria/);
+  // Sólo es un escenario si existen importes en los propios registros de la usuaria.
+  const fondoGs = fondo ? num(fondo.monto_gs) : null;
+  const piscinaGs = piscina ? num(piscina.monto_gs) : null;
+  const revoqueGs = revoque ? num(revoque.monto_gs) : null;
+  const estimado = fondoGs != null && piscinaGs != null && revoqueGs != null
+    ? fondoGs - piscinaGs - revoqueGs : null;
+  const summary = [];
+  if (fondo) summary.push(h('div',{class:'casa-kpi'},
+    h('div',{class:'casa-label'},'Fondo adicional previsto'),
+    h('div',{class:'num'}, gs(fondoGs)),
+    h('div',{class:'note'},'No es saldo bancario confirmado ni un gasto.')));
+  if (estimado != null) summary.push(h('div',{class:'casa-kpi'},
+    h('div',{class:'casa-label'}, 'Remanente teórico'),
+    h('div',{class:'num'}, gs(estimado)),
+    h('div',{class:'note'}, 'Sólo si piscina y revoque salen íntegramente del mismo fondo.')));
+  const partes = str(fondo?.notas).match(/Mar Gs\.\s*([\d.]+)\s*\+\s*Enri Gs\.\s*([\d.]+)/i);
+  const aportesNota = partes ? `Mar: ${gs(num(partes[1]))} · Enri: ${gs(num(partes[2]))}` : 'Distribución de aportes: consultar notas';
+  const detalleRevoque = str(revoque?.notas).match(/Total Gs\.\s*([\d.]+);\s*pagados Gs\.\s*([\d.]+)/i);
+  const revoqueNota = detalleRevoque ? `Total ${gs(num(detalleRevoque[1]))} · pagado ${gs(num(detalleRevoque[2]))}` : 'Saldo según registro';
+  const rows = [];
+  if (fondo) rows.push(h('div',{class:'casa-line'},
+    h('div',null, h('strong',null,'Aportes para casa'), h('span',{class:'casa-status'},'Fondo previsto'),
+      h('div',{class:'note'}, aportesNota)),
+    h('span',{class:'num'},gs(fondoGs))));
+  if (piscina) rows.push(h('div',{class:'casa-line'},
+    h('div',null,h('strong',null,'Piscina'),h('span',{class:'casa-status'},'Presupuesto estimado'),
+      h('div',{class:'note'},'Aún no es deuda ni gasto pagado')),
+    h('span',{class:'num'},gs(piscinaGs))));
+  if (revoque) rows.push(h('div',{class:'casa-line'},
+    h('div',null,h('strong',null,'Revoque de Chalito'),h('span',{class:'casa-status'},'Saldo por pagar'),
+      h('div',{class:'note'},revoqueNota)),
+    h('span',{class:'num'},gs(revoqueGs))));
+  if (hipoteca) rows.push(h('div',{class:'casa-line'},
+    h('div',null,h('strong',null,'Próxima cuota hipotecaria'),h('span',{class:'casa-status'},'Recordatorio'),
+      h('div',{class:'note'}, `${hipoteca.fecha ? fmtDate(hipoteca.fecha) + ' · ' : ''}Mar paga la cuota y Enri reintegra el 50 %; no contar reintegro como sueldo`)),
+    h('span',{class:'num'},gs(num(hipoteca.monto_gs)))));
+  return panel(h('div',null,h('h2',null,'Casa · Gastos compartidos'),
+    h('p',{class:'note'},'Planificación separada de movimientos, ingresos y saldos bancarios.')),
+    null,
+    summary.length ? h('div',{class:'casa-kpis'}, ...summary) : null,
+    h('div',null,...rows),
+    h('p',{class:'note', style:'margin-top:12px'},'Este cuadro es informativo y toma los importes de los recordatorios guardados. No descuenta nada de tus cuentas. El capital de la hipoteca sigue pendiente de confirmar.'));
+}
+
 function vCobros(){
   const cobros = list('cobro');
   const pendientes = cobros.filter(c => !/cobrado/i.test(c.estado||''));
@@ -1089,7 +1265,7 @@ function vCobros(){
     calList.append(h('div',{class:'cal-row' + (done ? ' done' : ''), role:'button', tabindex:'0', onclick:() => openForm('evento', e.id), onkeydown: k => { if (k.key === 'Enter') openForm('evento', e.id); }},
       h('div',{class:'d'}, d ? [h('b',null, d.getDate()), MES_CORTO[d.getMonth()]] : h('span',{class:'muted'}, e.fecha_texto ? 'Mes' : '—')),
       h('div',{style:'min-width:0'}, h('div',{style:'font-weight:500;overflow-wrap:anywhere'}, e.concepto || '(sin concepto)'),
-        h('div',{class:'small muted', style:'overflow-wrap:anywhere'}, [e.entidad, e.fecha_texto && !e.fecha ? e.fecha_texto : null].filter(Boolean).join(' · '), ' ', h('span',{class:'chip ' + chipFor(e.estado)}, e.estado || e.tipo), e.tipo === 'Cuenta por cobrar' ? h('span',{class:'chip', style:'margin-left:4px'}, 'no proyectado') : null),
+        h('div',{class:'small muted', style:'overflow-wrap:anywhere'}, [e.entidad, e.fecha_texto && !e.fecha ? e.fecha_texto : null].filter(Boolean).join(' · '), ' ', h('span',{class:'chip ' + chipFor(e.estado)}, e.estado || e.tipo), e.tipo === 'Cuenta por cobrar' ? h('span',{class:'chip', style:'margin-left:4px'}, 'no proyectado') : e.tipo === 'Recordatorio' ? h('span',{class:'chip', style:'margin-left:4px'}, 'no descontado') : null),
         e.notas ? h('div',{class:'small muted', style:'overflow-wrap:anywhere'}, e.notas) : null),
       h('div',{style:'text-align:right'},
         h('div',{class:'num ' + (e.tipo === 'Salida' ? 'amt neg' : e.tipo === 'Entrada' ? 'amt pos' : '')}, (e.tipo === 'Salida' ? '−' : e.tipo === 'Entrada' ? '+' : '') + (num(e.monto_gs) ? gs(num(e.monto_gs)) : num(e.monto_usd) ? usd(num(e.monto_usd)) : '—')),
@@ -1100,7 +1276,8 @@ function vCobros(){
       h('div',{class:'totals'}, h('span',null,'Pendiente ', h('b',null, gs(tot))), vencido ? h('span',null,'Vencido ', h('b',{class:'amt neg'}, gs(vencido))) : null),
       h('div',{style:'height:6px'}),
       cobros.length ? h('div',{class:'list'}, [...pendientes, ...cobros.filter(c => /cobrado/i.test(c.estado||''))].map(cobroRow)) : h('p',{class:'muted small'},'Sin cuentas por cobrar.')),
-    panel(h('div',null, h('h2',null,'Calendario financiero'), h('div',{class:'note'}, `Saldo proyectado desde la liquidez propia en guaraníes (${gs(liquidezPYG())}), sumando entradas y restando salidas pendientes.`)), [addBtn('evento')],
+    casaResumenFinanciero(evs),
+    panel(h('div',null, h('h2',null,'Calendario financiero'), h('div',{class:'note'}, `Saldo proyectado desde la liquidez propia en guaraníes (${gs(liquidezPYG())}). Sólo los eventos marcados Entrada o Salida alteran esta proyección; los Recordatorios no afectan el saldo.`)), [addBtn('evento')],
       evs.length ? calList : h('p',{class:'muted small'},'Sin eventos en el calendario.'))
   ];
 }
@@ -1449,6 +1626,55 @@ async function exportEncrypted(){
     offerFile(`mar-finanzas-cifrado-${TODAY}.mfin`,JSON.stringify(envelope));
   }catch(e){alert('No se pudo cifrar el respaldo: '+e.message);}
 }
+async function restoreEncryptedIntoNewVault(file){
+  if(!file||!secureCrypto())return;
+  try{
+    if(localStorage.getItem(VAULT_KEY))throw Error('Ya existe una bóveda en este navegador. Abrí esa bóveda y usá Ajustes → Restaurar respaldo.');
+    if(file.size>15*1024*1024)throw Error('Archivo demasiado grande.');
+    const env=JSON.parse(await file.text());
+    if(env.format!=='mar-finanzas-encrypted'||env.version!==1||env.iterations!==600000||env.kdf!=='PBKDF2-SHA256'||env.cipher!=='AES-256-GCM')throw Error('Formato cifrado no reconocido. Seleccioná el respaldo .mfin original.');
+    const salt=from64(env.salt),iv=from64(env.iv),ciphertext=from64(env.data);
+    if(salt.length!==16||iv.length!==12||ciphertext.length<16)throw Error('El archivo cifrado no tiene una estructura válida.');
+    const backupPassword=prompt('Ingresá la contraseña que usaste para crear ESTE respaldo .mfin:');
+    if(backupPassword===null)return;
+    const backupKey=await deriveBackupKey(backupPassword,salt,'decrypt');
+    let raw;
+    try{raw=await crypto.subtle.decrypt({name:'AES-GCM',iv},backupKey,ciphertext);}catch{throw Error('Contraseña incorrecta o respaldo dañado.');}
+    const data=JSON.parse(new TextDecoder().decode(raw));
+    if(data.format!=='mar-finanzas-backup'||data.version!==2||!Array.isArray(data.items)||!Array.isArray(data.boda)||!data.settings||typeof data.settings!=='object'||Array.isArray(data.settings))throw Error('El respaldo se abrió, pero su estructura no coincide con esta versión de la app. No se modificó nada.');
+    const validEntries=a=>a.length<=20000&&a.every(e=>Array.isArray(e)&&e.length===2&&typeof e[0]==='string'&&e[1]&&typeof e[1]==='object'&&!Array.isArray(e[1]));
+    if(!validEntries(data.items)||!validEntries(data.boda))throw Error('Los registros del respaldo no son válidos. No se modificó nada.');
+    if(!confirm(`Se restaurarán ${data.items.length} registros y ${data.boda.length} registros extra en ESTE navegador de la computadora. Se reemplazarán los datos locales de esta computadora, pero no se modifica el almacenamiento del celular. ¿Continuar?`))return;
+    const localPassword=prompt('Creá una contraseña para proteger esta bóveda en la computadora (mínimo 12 caracteres). Puede ser distinta de la contraseña del respaldo.');
+    if(localPassword===null)return;
+    if(localPassword.length<12)throw Error('La contraseña de la bóveda debe tener al menos 12 caracteres.');
+    const again=prompt('Repetí la contraseña nueva de la bóveda de esta computadora:');
+    if(again===null)return;
+    if(again!==localPassword)throw Error('Las contraseñas de la nueva bóveda no coinciden. No se modificó nada.');
+    if(localStorage.getItem(VAULT_KEY))throw Error('Se creó una bóveda durante el proceso. Recargá la página y usá la opción de restauración de Ajustes.');
+    const localSalt=crypto.getRandomValues(new Uint8Array(16));
+    const localKey=await vaultDerive(localPassword,localSalt);
+    const payload=JSON.stringify({items:data.items,boda:data.boda,settings:data.settings});
+    const encrypted=await vaultEncrypt(localKey,payload,localSalt);
+    const verify=JSON.parse(await vaultDecrypt(localKey,JSON.parse(encrypted)));
+    if(!Array.isArray(verify.items)||!Array.isArray(verify.boda)||!verify.settings)throw Error('Falló la verificación interna. No se guardó la bóveda.');
+    localStorage.setItem(VAULT_KEY,encrypted);
+    const stored=localStorage.getItem(VAULT_KEY);
+    if(!stored||JSON.stringify(JSON.parse(await vaultDecrypt(localKey,JSON.parse(stored))))!==JSON.stringify(verify)){
+      localStorage.removeItem(VAULT_KEY);
+      throw Error('No se pudo verificar la bóveda guardada. No se eliminó ningún respaldo.');
+    }
+    // Solo después de verificar el cifrado se retira la base local antigua de este navegador.
+    localStorage.removeItem(LOCAL_KEY);localStorage.removeItem('fin:origen');
+    applyVaultPayload(JSON.stringify({items:data.items,boda:data.boda,settings:data.settings}));
+    vaultKey=localKey;vaultLocked=false;vaultClosing=false;vaultSaveError=null;vaultGeneration++;
+    loaded=true;persistent=false;bodaOK=true;setSync('Bóveda local cifrada','ok');
+    const overlay=document.getElementById('vault-lock');if(overlay)overlay.remove();
+    if($('#fab'))$('#fab').hidden=false;
+    render();toast('Respaldo restaurado y cifrado en esta computadora.');
+  }catch(e){alert('No se pudo restaurar el respaldo: '+e.message);}
+}
+
 async function importEncrypted(file){
   if (!file || !secureCrypto()) return;
   try{
@@ -1499,6 +1725,47 @@ async function importBackupFile(file){
   } catch(e) { alert('No se pudo importar el respaldo: '+e.message); }
 }
 
+/* ---------- adición privada sin reemplazar movimientos ---------- */
+async function importarAdicionPrivada(file){
+  if(!file)return;
+  try{
+    if(vaultLocked||vaultClosing) throw Error('Desbloqueá la bóveda primero.');
+    if(file.size>300000) throw Error('Archivo demasiado grande.');
+    const obj=JSON.parse(await file.text());
+    if(obj.format!=='mar-finanzas-adicion-privada'||obj.version!==1||!Array.isArray(obj.items)||!Array.isArray(obj.boda)) throw Error('El archivo no es una adición privada válida.');
+    if(obj.items.length>200||obj.boda.length>100) throw Error('Demasiados registros.');
+    const allowed=new Set(['cuenta','tarjeta','deuda','recurrente','evento','ingreso','meta','presupuesto']);
+    const valid = (a,allowedKinds)=>a.every(o=>o&&typeof o==='object'&&!Array.isArray(o)&&allowedKinds.has(o.kind)&&Object.keys(o).every(k=>k==='kind'||(o.kind==='bitem'&&k==='rubro_nombre')||SCHEMA[o.kind].fields.some(f=>f[0]===k)));
+    if(!valid(obj.items,allowed)||!valid(obj.boda,new Set(['proyecto','rubro','bitem']))) throw Error('Hay tipos o campos no admitidos.');
+    // Aceptar solo la boda si la colección del proyecto está vacía: no mezclar rubros de dos presupuestos.
+    const existingBoda=boda.size>0;
+    const keyFor=o=>{
+      const fields={cuenta:['banco','cuenta','moneda'],tarjeta:['banco','tarjeta','moneda'],deuda:['entidad','concepto'],recurrente:['concepto','quien'],evento:['entidad','concepto','fecha'],ingreso:['fuente','detalle'],meta:['objetivo'],presupuesto:['categoria','mes']};
+      return o.kind+'|'+(fields[o.kind]||[]).map(k=>String(o[k]||'').trim().toLowerCase()).join('|');
+    };
+    const existingKeys=new Set([...items.values()].filter(v=>allowed.has(v.kind)).map(keyFor));
+    const newItems=obj.items.filter(o=>!existingKeys.has(keyFor(o))&&!!existingKeys.add(keyFor(o)));
+    const txt=`Se agregarán ${newItems.length} registros financieros NUEVOS, sin tocar movimientos ni registros existentes.`+(existingBoda?'\nLa boda existente se conservará SIN cambios.':'\nSe agregará el presupuesto de boda de 13 partidas.')+'\n\n¿Continuar?';
+    if(!confirm(txt))return;
+    const gen=vaultGeneration;
+    await commitMutation(()=>{
+      if(gen!==vaultGeneration) throw Error('La sesión cambió');
+      for(const o of newItems)items.set(newId(),o);
+      if(!existingBoda){
+        boda.set('config',{kind:'proyecto',nombre:'Boda',organizador:''});
+        const rubros=new Map();
+        for(const r of obj.boda.filter(x=>x.kind==='rubro')){const id=newId(); rubros.set(r.nombre,id);boda.set(id,r);}
+        for(const it of obj.boda.filter(x=>x.kind==='bitem')){
+          const {rubro_nombre,...rest}=it;
+          if(!rubros.has(rubro_nombre)) throw Error('Rubro de boda inválido');
+          boda.set(newId(),{...rest,rubro:rubros.get(rubro_nombre)});
+        }
+      }
+    });
+    render();toast('Adición guardada y cifrada. Revisá saldos y partidas.');
+  }catch(e){alert('No se pudo agregar los datos: '+e.message);}
+}
+
 function vAjustes(){
   const out = [];
   const tcInput = h('input',{id:'tc-in', class:'field', type:'text', inputmode:'decimal', placeholder:'Ej. 7.300', value: settings.tc ? nf0.format(num(settings.tc)) : ''});
@@ -1516,6 +1783,10 @@ function vAjustes(){
       state.confirmWipe
         ? [h('button',{type:'button', class:'btn danger', onclick: wipeAll}, `Sí, borrar ${items.size} registros`), h('button',{type:'button', class:'btn', onclick:() => { state.confirmWipe = false; render(); }}, 'Cancelar')]
         : h('button',{type:'button', class:'btn danger', disabled: !items.size, onclick:() => { state.confirmWipe = true; render(); }}, 'Borrar todo'))));
+  out.push(panel('Agregar mis datos privados (sin borrar movimientos)', null,
+    h('p',{class:'note'},'Seleccioná el archivo privado JSON que recibiste. Agrega solo fichas que no existan; nunca reemplaza movimientos ni restaura un respaldo. Antes, conservá una copia .mfin. No subas el JSON a GitHub.'),
+    h('input',{id:'adicion-privada',type:'file',accept:'.json,application/json',hidden:true,onchange:e=>{importarAdicionPrivada(e.target.files[0]);e.target.value='';}}),
+    h('button',{type:'button',class:'btn primary',onclick:()=>document.getElementById('adicion-privada').click()},'Agregar datos privados')));
   return out;
 }
 
